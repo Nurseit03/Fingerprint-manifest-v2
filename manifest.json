@@ -1,26 +1,38 @@
 {
-   "background": {
-      "scripts": [ "background.js" ]
-   },
-   "browser_action": {
-      "default_popup": "fingerprint.html"
-    },
-   "content_scripts": [ {
+  "manifest_version": 3,
+  "name": "DigitalPersona UareU 3",
+  "version": "2.0.0",
+  "description": "Для сканера отпечатков пальцев",
+
+  "action": {
+    "default_popup": "fingerprint.html"
+  },
+  
+  "background": {
+    "service_worker": "service-worker.js"
+  },
+
+  "icons": {
+    "32": "icons/32.png",
+    "48": "icons/48.png",
+    "64": "icons/64.png",
+    "128": "icons/128.png"
+  },
+
+  "permissions": [
+    "nativeMessaging"
+  ],
+
+  "host_permissions": [
+    "http://localhost:8282/"
+  ],
+
+  "content_scripts": [
+    {
       "all_frames": true,
       "js": [ "content.js" ],
-      "matches": [ "\u003Call_urls>" ],
+      "matches": [ "<all_urls>" ],
       "run_at": "document_start"
-   } ],
-   "description": "Для сканера отпечатков пальцев",
-   "icons": {
-      "32": "icons/32.png",
-      "48": "icons/48.png",
-      "64": "icons/64.png",
-      "128": "icons/128.png"
-   },
-   "manifest_version": 2,
-   "name": "DigitalPersona UareU 2",
-   "permissions": [ "nativeMessaging" ],
-   "version": "0.0.1",
-   "web_accessible_resources": [ "fingerprint.js" ]
+    }
+  ]
 }
