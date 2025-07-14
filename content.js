@@ -1,63 +1,60 @@
-(function () {
-  var _browser = window.chrome ? chrome : browser;
-  var extId = _browser.runtime.id;
-  var objId = "DigitalPersona";
+const BASE_URL = "http://localhost:8282";
 
-  !(function () {
-    var script = document.createElement("script");
+async function handleMessage(event) {
+  if (event.source !== window || !event.data || event.data.source !== 'DIGITALPERSONA_FRONTEND') {
+    return;
+  }
 
-    script.textContent =
-      "(" +
-      function (extId, objId) {
-        var extension = (window[objId] = {});
+  const { action, payload, requestId } = event.data;
+  let responseData = null;
+  let error = null;
 
-        window[extId] = extension;
+  try {
+    switch (action) {
+      case 'loadDevices': {
+        const DEVICE_URL = "/v2/scanner/devices";
+        responseData = await sendRequest(BASE_URL + DEVICE_URL, "GET");
+        break;
+      }
+      case 'capture': {
+        const CAPTURE_URL = "/v2/scanner/capture";
+        responseData = await sendRequest(BASE_URL + CAPTURE_URL, "POST", payload);
+        break;
+      }
+      default:
+        throw new Error(`Unknown action: ${action}`);
+    }
+  } catch (e) {
+    console.error(`[DigitalPersona Extension] Error executing action '${action}':`, e);
+    error = e.message;
+  }
 
-        const BASE_URL = "http://localhost:8282";
-        const captureUrl = "/v2/scanner/capture";
-        const deviceUrl = "/v2/scanner/devices";
+  window.postMessage({
+    source: 'DIGITALPERSONA_EXTENSION',
+    requestId: requestId,
+    data: responseData,
+    error: error,
+  }, event.origin);
+}
 
-        async function sendRequest(url, method, body) {
-          try {
-            const response = await fetch(url, {
-              method: method,
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(body),
-            });
+window.addEventListener('message', handleMessage, false);
 
-            if (!response.ok) {
-              throw new Error("Network response was not ok");
-            }
-            return await response.json();
-          } catch (error) {
-            console.error(
-              "There was a problem with your fetch operation:",
-              error
-            );
-            return null;
-          }
-        }
+async function sendRequest(url, method, body = null) {
+  const options = {
+    method: method,
+    headers: {
+      "Content-Type": "application/json",
+    },
+  };
 
-        extension.capture = async function (requestBody) {
-          const res = await sendRequest(BASE_URL + captureUrl, "POST", requestBody);
-          return res;
-        };
+  if (body) {
+    options.body = JSON.stringify(body);
+  }
 
-        extension.loadDevices = async function () {
-          const res = await sendRequest(BASE_URL + deviceUrl, "GET");
-          return res;
-        };
-      } +
-      ")(" +
-      JSON.stringify(extId) +
-      "," +
-      JSON.stringify(objId) +
-      ")";
-
-    (document.head || document.documentElement).appendChild(script);
-
-    script.parentNode.removeChild(script);
-  })();
-})();
+  const response = await fetch(url, options);
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Network response was not ok. Status: ${response.status}. Body: ${errorText}`);
+  }
+  return await response.json();
+}

@@ -69,11 +69,19 @@ async function sendRequest(url, method, body = null) {
       options.body = JSON.stringify(body);
     }
 
-    const response = await fetch(url, options);
-    if (!response.ok) throw new Error("Network response was not ok");
-    return await response.json();
+    const response = await chrome.runtime.sendMessage({
+      action: "proxyFetch",
+      payload: { url, options }
+    });
+
+    if (response && response.success) {
+      return response.data;
+    } else {
+      throw new Error(response.error || "Произошла неизвестная ошибка в фоновом скрипте.");
+    }
   } catch (error) {
-    console.error("There was a problem with your fetch operation:", error);
+    console.error("Проблема во время выполнения запроса:", error);
+    alert(`Ошибка: ${error.message}`);
     throw error;
   }
 }
